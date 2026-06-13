@@ -181,7 +181,7 @@ class Submission(Base):
     problem_id = Column(Integer, ForeignKey("problems.id"))
     user_id = Column(Integer, ForeignKey("users.id"))
     code = Column(Text)
-    language = Column(String(20), default="c")
+    language = Column(String(20), default="python")
     status = Column(String(30), default="Pending")
     score = Column(Float, default=0.0)
     time_taken = Column(Integer)          # seconds from test start
@@ -191,6 +191,8 @@ class Submission(Base):
     test_cases_passed = Column(Integer, default=0)
     test_cases_total = Column(Integer, default=0)
     feedback = Column(Text)  # teacher feedback (manual or AI-suggested)
+    feedback_sent_at = Column(DateTime)    # when the admin sent feedback to the student
+    feedback_viewed_at = Column(DateTime)  # when the student marked it read
 
     problem = relationship("Problem", back_populates="submissions")
     user = relationship("User", back_populates="submissions")

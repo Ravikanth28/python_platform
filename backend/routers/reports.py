@@ -33,6 +33,9 @@ def _row(s: models.Submission) -> dict:
         "tab_switches": s.tab_switches,
         "test_cases_passed": s.test_cases_passed,
         "test_cases_total": s.test_cases_total,
+        "has_feedback": bool(s.feedback and s.feedback.strip()),
+        "feedback_sent": s.feedback_sent_at is not None,
+        "feedback_viewed": s.feedback_viewed_at is not None,
         "submitted_at": s.submitted_at.isoformat() + ("" if s.submitted_at.tzinfo else "Z"),
     }
 
@@ -160,9 +163,31 @@ def get_report_detail(
         for r in s.results
     ]
 
+    # Students only see feedback once the admin has SENT it (drafts stay hidden).
+    feedback_visible = s.feedback if (current_user.role == "admin" or s.feedback_sent_at is not None) else None
+
     return {
         **_row(s),
         "code": s.code,
-        "feedback": s.feedback,
+        "feedback": feedback_visible,
         "results": results,
     }
+
+
+@router.post("/{submission_id}/viewed")
+def mark_feedback_viewed(
+    submission_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Student marks the teacher feedback on their own submission as read."""
+    s = db.query(models.Submission).filter(models.Submission.id == submission_id).first()
+    if not s:
+        raise HTTPException(404, "Not found")
+    if s.user_id != current_user.id:
+        raise HTTPException(403, "Forbidden")
+    if s.feedback_sent_at is not None and s.feedback_viewed_at is None:
+        import datetime as _dt
+        s.feedback_viewed_at = _dt.datetime.utcnow()
+        db.commit()
+    return {"ok": True, "feedback_viewed": s.feedback_viewed_at is not None}

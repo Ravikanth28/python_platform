@@ -780,7 +780,7 @@ export default function CodingEnvironment() {
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1.5 text-xs text-t2 cursor-default select-none font-medium">
                 <span className="w-2 h-2 rounded-full inline-block" style={{ background: 'var(--info)' }} />
-                C Language
+                Python
               </div>
               <span className="text-[11px] text-t4 hidden sm:inline tabular">
                 {saveState === 'saving' ? 'Saving…' : '✓ Saved'}

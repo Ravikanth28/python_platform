@@ -38,6 +38,8 @@ def _lightweight_migrate():
         "ALTER TABLE test_sessions ADD COLUMN runs INT DEFAULT 0",
         "ALTER TABLE problems ADD COLUMN window_switch_detect BOOLEAN DEFAULT FALSE",
         "ALTER TABLE problems ADD COLUMN block_paste BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE submissions ADD COLUMN feedback_sent_at DATETIME",
+        "ALTER TABLE submissions ADD COLUMN feedback_viewed_at DATETIME",
     ]
     with engine.begin() as conn:
         for s in stmts:
@@ -52,6 +54,15 @@ def _lightweight_migrate():
                              {"c": secrets.token_hex(3).upper(), "i": cid})
         except Exception as e:
             logging.warning(f"invite-code backfill skipped: {e}")
+        try:
+            # Treat any pre-existing feedback as already "sent" (unread) so it
+            # stays visible to students after the send/read-receipt feature lands.
+            conn.execute(text(
+                "UPDATE submissions SET feedback_sent_at = submitted_at "
+                "WHERE feedback IS NOT NULL AND feedback != '' AND feedback_sent_at IS NULL"
+            ))
+        except Exception as e:
+            logging.warning(f"feedback-sent backfill skipped: {e}")
 
 
 try:

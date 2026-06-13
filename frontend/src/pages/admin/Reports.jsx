@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Search, Eye, CheckCircle, XCircle, Clock, Code2, Download, Sparkles } from 'lucide-react'
+import { Search, Eye, CheckCircle, XCircle, Clock, Code2, Download, Sparkles, MessageSquare } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import toast from 'react-hot-toast'
 import api, { downloadFile } from '../../api/client'
@@ -111,6 +111,7 @@ export default function AdminReports() {
                 <th className="table-cell">Recent Problem</th>
                 <th className="table-cell">Total Submissions</th>
                 <th className="table-cell">Avg Score</th>
+                <th className="table-cell">Feedback</th>
                 <th className="table-cell">Last Active</th>
                 <th className="table-cell">Actions</th>
               </tr>
@@ -118,7 +119,7 @@ export default function AdminReports() {
             <tbody>
               {groupedArray.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="table-cell text-center py-12 text-t4">
+                  <td colSpan={8} className="table-cell text-center py-12 text-t4">
                     No students found.
                   </td>
                 </tr>
@@ -138,6 +139,16 @@ export default function AdminReports() {
                     <span className="tabular" style={{ color: Math.round(g.total_score / g.submissions.length) >= 100 ? 'var(--ok)' : Math.round(g.total_score / g.submissions.length) > 0 ? 'var(--warn)' : 'var(--err)' }}>
                       {Math.round(g.total_score / g.submissions.length)}%
                     </span>
+                  </td>
+                  <td className="table-cell">
+                    {(() => {
+                      const n = g.submissions.filter(s => s.feedback_sent).length
+                      return n > 0
+                        ? <span className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: 'var(--brand)' }}>
+                            <MessageSquare size={12} /> {n} sent
+                          </span>
+                        : <span className="text-t4 text-xs">—</span>
+                    })()}
                   </td>
                   <td className="table-cell text-t4 text-xs tabular">
                     {formatDistanceToNow(new Date(g.latest_submission.submitted_at), { addSuffix: true })}
@@ -170,6 +181,7 @@ export default function AdminReports() {
                   <th className="table-cell">Score</th>
                   <th className="table-cell">Time</th>
                   <th className="table-cell">Submitted</th>
+                  <th className="table-cell">Feedback</th>
                   <th className="table-cell">Report</th>
                 </tr>
               </thead>
@@ -182,6 +194,13 @@ export default function AdminReports() {
                     <td className="table-cell text-t3 tabular">{r.score}%</td>
                     <td className="table-cell text-t3 tabular">{r.time_taken != null ? `${Math.floor(r.time_taken/60)}m ${r.time_taken%60}s` : '—'}</td>
                     <td className="table-cell text-t4 text-xs tabular">{formatDistanceToNow(new Date(r.submitted_at), { addSuffix: true })}</td>
+                    <td className="table-cell">
+                      {r.feedback_viewed
+                        ? <span className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: 'var(--ok)' }}><MessageSquare size={12} /> Viewed</span>
+                        : r.feedback_sent
+                          ? <span className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: 'var(--brand)' }}><MessageSquare size={12} /> Sent</span>
+                          : <span className="text-t4 text-xs">—</span>}
+                    </td>
                     <td className="table-cell">
                       <button onClick={() => openDetail(r.submission_id)} className="btn-secondary btn-sm"><Eye size={12}/> View</button>
                     </td>
@@ -201,21 +220,28 @@ export default function AdminReports() {
         size="lg"
       >
         {detailLoading && <PageLoader />}
-        {detail && <ReportDetail report={detail} />}
+        {detail && <ReportDetail report={detail} onSaved={load} />}
       </Modal>
     </div>
   )
 }
 
-function ReportDetail({ report: r }) {
+function ReportDetail({ report: r, onSaved }) {
   const [showCode, setShowCode] = useState(false)
   const [fb, setFb] = useState(r.feedback || '')
   const [savingFb, setSavingFb] = useState(false)
   const [suggesting, setSuggesting] = useState(false)
+  const [sent, setSent] = useState(!!r.feedback_sent)
+  const [viewed, setViewed] = useState(!!r.feedback_viewed)
   const saveFb = async () => {
     setSavingFb(true)
-    try { await api.post(`/submissions/${r.submission_id}/feedback`, { feedback: fb }); toast.success('Feedback saved') }
-    catch { toast.error('Failed to save feedback') }
+    try {
+      const { data } = await api.post(`/submissions/${r.submission_id}/feedback`, { feedback: fb })
+      setSent(!!data.feedback_sent); setViewed(!!data.feedback_viewed)
+      toast.success(data.feedback_sent ? 'Feedback sent to student' : 'Feedback cleared')
+      onSaved?.()
+    }
+    catch { toast.error('Failed to send feedback') }
     finally { setSavingFb(false) }
   }
   const suggestFb = async () => {
@@ -320,8 +346,17 @@ function ReportDetail({ report: r }) {
         </div>
         <textarea className="input resize-none" rows={3} value={fb} onChange={(e) => setFb(e.target.value)}
           placeholder="Write feedback the student will see in their report…" />
-        <div className="flex justify-end mt-2">
-          <button className="btn-primary btn-sm" onClick={saveFb} disabled={savingFb}>{savingFb ? 'Saving…' : 'Save feedback'}</button>
+        <div className="flex items-center justify-between mt-2">
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium">
+            {viewed
+              ? <span className="inline-flex items-center gap-1" style={{ color: 'var(--ok)' }}><MessageSquare size={12} /> Viewed by student</span>
+              : sent
+                ? <span className="inline-flex items-center gap-1" style={{ color: 'var(--brand)' }}><MessageSquare size={12} /> Sent — awaiting student</span>
+                : <span className="text-t4">Not sent yet</span>}
+          </span>
+          <button className="btn-primary btn-sm" onClick={saveFb} disabled={savingFb}>
+            {savingFb ? 'Sending…' : sent ? 'Update & resend' : 'Send to student'}
+          </button>
         </div>
       </div>
     </div>

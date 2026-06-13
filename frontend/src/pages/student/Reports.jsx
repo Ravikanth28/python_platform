@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Eye, CheckCircle, XCircle, Clock, Code2, Download, Award, Search } from 'lucide-react'
+import { Eye, CheckCircle, XCircle, Clock, Code2, Download, Award, Search, MessageSquare } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import toast from 'react-hot-toast'
 import api, { downloadFile } from '../../api/client'
@@ -96,12 +96,13 @@ export default function StudentReports() {
                 <th className="table-cell">Passed</th>
                 <th className="table-cell">Time</th>
                 <th className="table-cell">Submitted</th>
+                <th className="table-cell">Feedback</th>
                 <th className="table-cell">Report</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={9} className="table-cell text-center py-12 text-t4">No submissions found.</td></tr>
+                <tr><td colSpan={10} className="table-cell text-center py-12 text-t4">No submissions found.</td></tr>
               )}
               {filtered.map((r, i) => (
                 <tr key={r.submission_id} className="table-row">
@@ -122,6 +123,21 @@ export default function StudentReports() {
                     {formatDistanceToNow(new Date(r.submitted_at), { addSuffix: true })}
                   </td>
                   <td className="table-cell">
+                    {!r.feedback_sent
+                      ? <span className="text-t4 text-xs">—</span>
+                      : r.feedback_viewed
+                        ? <button onClick={() => openDetail(r.submission_id)}
+                            className="inline-flex items-center gap-1 text-xs text-t3">
+                            <MessageSquare size={12} /> Viewed
+                          </button>
+                        : <button onClick={() => openDetail(r.submission_id)}
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-full"
+                            style={{ color: 'var(--brand)', background: 'var(--brandGhost)' }}>
+                            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: 'var(--brand)' }} />
+                            New feedback
+                          </button>}
+                  </td>
+                  <td className="table-cell">
                     <button onClick={() => openDetail(r.submission_id)}
                       className="btn-secondary text-xs py-1 px-3">
                       <Eye size={12} /> View
@@ -135,7 +151,7 @@ export default function StudentReports() {
       </div>
 
       <Modal open={!!detail} onClose={() => setDetail(null)} title="Submission Report" size="lg">
-        {detailLoading || detail === 'loading' ? <PageLoader /> : detail && <ReportDetail report={detail} />}
+        {detailLoading || detail === 'loading' ? <PageLoader /> : detail && <ReportDetail report={detail} onViewed={load} />}
       </Modal>
 
       <CertificateModal
@@ -149,8 +165,16 @@ export default function StudentReports() {
   )
 }
 
-function ReportDetail({ report: r }) {
+function ReportDetail({ report: r, onViewed }) {
   const [showCode, setShowCode] = useState(false)
+  const [viewed, setViewed] = useState(!!r.feedback_viewed)
+  const [marking, setMarking] = useState(false)
+  const markRead = async () => {
+    setMarking(true)
+    try { await api.post(`/reports/${r.submission_id}/viewed`); setViewed(true); onViewed?.() }
+    catch { toast.error('Could not mark as read') }
+    finally { setMarking(false) }
+  }
   const passed = r.test_cases_passed
   const total  = r.test_cases_total
   const pct    = total ? Math.round((passed / total) * 100) : 0
@@ -193,7 +217,14 @@ function ReportDetail({ report: r }) {
 
       {r.feedback && (
         <div className="rounded-lg border p-3" style={{ borderColor: 'color-mix(in srgb, var(--brand) 30%, transparent)', background: 'var(--brandGhost)' }}>
-          <p className="text-[11px] font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--brand)' }}>Teacher feedback</p>
+          <div className="flex items-center justify-between mb-1 gap-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--brand)' }}>Teacher feedback</p>
+            {viewed
+              ? <span className="inline-flex items-center gap-1 text-[11px] font-medium" style={{ color: 'var(--ok)' }}><CheckCircle size={12} /> Read</span>
+              : <button onClick={markRead} disabled={marking} className="btn-primary text-[11px] py-1 px-2.5">
+                  {marking ? 'Marking…' : 'Mark as read'}
+                </button>}
+          </div>
           <p className="text-[13px] text-t2 whitespace-pre-wrap leading-relaxed">{r.feedback}</p>
         </div>
       )}

@@ -444,12 +444,27 @@ class FeedbackRequest(BaseModel):
 
 @router.post("/{sub_id}/feedback")
 def save_feedback(sub_id: int, payload: FeedbackRequest, db: Session = Depends(get_db), _admin=Depends(get_admin_user)):
+    """Send (or update) teacher feedback to the student. Sending marks it as
+    delivered and resets the student's read receipt so new feedback shows as unread."""
+    import datetime as _dt
     s = db.query(models.Submission).filter(models.Submission.id == sub_id).first()
     if not s:
         raise HTTPException(404, "Submission not found")
+    text_in = (payload.feedback or "").strip()
     s.feedback = payload.feedback
+    if text_in:
+        s.feedback_sent_at = _dt.datetime.utcnow()
+        s.feedback_viewed_at = None          # new/updated feedback is unread again
+    else:
+        s.feedback_sent_at = None            # cleared feedback un-sends it
+        s.feedback_viewed_at = None
     db.commit()
-    return {"ok": True, "feedback": s.feedback}
+    return {
+        "ok": True,
+        "feedback": s.feedback,
+        "feedback_sent": s.feedback_sent_at is not None,
+        "feedback_viewed": s.feedback_viewed_at is not None,
+    }
 
 
 @router.post("/{sub_id}/feedback/suggest")
@@ -467,7 +482,7 @@ async def suggest_feedback(sub_id: int, db: Session = Depends(get_db), _admin=De
     user = (
         f"Problem: {prob.title if prob else ''}\n{(prob.description or '') if prob else ''}\n\n"
         f"Verdict: {s.status} ({s.test_cases_passed}/{s.test_cases_total} test cases passed, score {s.score}%).\n\n"
-        f"Student's code:\n```c\n{(s.code or '')[:4000]}\n```\n\nWrite short feedback addressed to the student."
+        f"Student's code:\n```python\n{(s.code or '')[:4000]}\n```\n\nWrite short feedback addressed to the student."
     )
     try:
         text = await chat_completion(

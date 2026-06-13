@@ -88,6 +88,7 @@ export default function AdminLiveTests() {
               <thead>
                 <tr className="table-header">
                   <th className="table-cell">Student</th>
+                  <th className="table-cell">Test name</th>
                   <th className="table-cell">Status</th>
                   <th className="table-cell">Time left</th>
                   <th className="table-cell">Violations</th>
@@ -109,6 +110,7 @@ export default function AdminLiveTests() {
                           <span className="text-t font-medium">{s.name}</span>
                         </div>
                       </td>
+                      <td className="table-cell text-t3">{t.title}</td>
                       <td className="table-cell">
                         <span className="inline-flex items-center gap-1.5 text-[12px] font-medium" style={{ color: st.color }}>
                           {s.status === 'attending' && <span className="animate-pulse w-1.5 h-1.5 rounded-full" style={{ background: st.color }} />}
