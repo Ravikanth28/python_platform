@@ -1,0 +1,23 @@
+# Slim production deps — only what the app imports at runtime.
+# (The full requirements.txt also has ML/dev libs that aren't needed to serve the API.)
+fastapi==0.115.0
+uvicorn==0.30.0
+websockets==16.0
+SQLAlchemy==2.0.35
+PyMySQL==1.1.2
+psycopg2-binary==2.9.11
+pydantic==2.12.5
+pydantic-settings==2.14.1
+python-jose==3.5.0
+ecdsa==0.19.2
+rsa==4.9.1
+pyasn1==0.6.3
+passlib==1.7.4
+bcrypt==4.0.1
+python-dotenv==1.2.2
+python-multipart==0.0.12
+httpx==0.28.1
+openpyxl==3.1.5
+aiofiles==25.1.0
+
+pyflakes==3.2.0

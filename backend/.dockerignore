@@ -1,0 +1,12 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.env
+uploads/
+*.sqlite3
+*.db
+.pytest_cache/
+_viz_test.py
+_viz_payload.json

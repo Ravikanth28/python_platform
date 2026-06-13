@@ -1,0 +1,48 @@
+# ── Python / FastAPI ─────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+.env
+.venv/
+venv/
+env/
+*.db
+*.sqlite
+*.sqlite3
+
+# ── Backend specific ─────────────────────────────────────────────────────────
+backend/__pycache__/
+backend/routers/__pycache__/
+backend/platform.db
+backend/.env
+backend/alembic/versions/
+
+# ── Node / React / Vite ──────────────────────────────────────────────────────
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+
+# ── OS ───────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Editors ──────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-error.log*

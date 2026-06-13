@@ -1,0 +1,24 @@
+name: Keep backend awake
+
+# Render's free web service sleeps after ~15 min idle, causing a ~50s cold start
+# for the next visitor. This pings the health endpoint every ~12 min so it stays warm.
+#
+# Set the URL: repo → Settings → Secrets and variables → Actions → Variables →
+#   New variable: name BACKEND_URL, value https://your-backend.onrender.com
+# (falls back to the value below if the variable isn't set).
+
+on:
+  schedule:
+    - cron: '*/12 * * * *'   # every 12 minutes
+  workflow_dispatch:          # allow manual run from the Actions tab
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /api/health
+        run: |
+          URL="${{ vars.BACKEND_URL }}"
+          if [ -z "$URL" ]; then URL="https://python-platform.onrender.com"; fi
+          echo "Pinging $URL/api/health"
+          curl -fsS --max-time 60 "$URL/api/health" || echo "ping failed (service may be waking) — not failing the job"

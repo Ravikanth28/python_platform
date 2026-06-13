@@ -1,0 +1,31 @@
+name: Auto-add challenges
+
+# Triggers the backend's challenge scheduler once a day. The BACKEND decides whether
+# to actually generate (based on the admin's Off/Daily/Weekly setting and last run),
+# so running daily is safe — weekly simply generates every 7th call.
+#
+# Setup:
+#   1. Backend env var: CRON_KEY = <a long random secret>
+#   2. Repo → Settings → Secrets and variables → Actions:
+#        Variable BACKEND_URL = https://your-backend.onrender.com
+#        Secret   CRON_KEY    = <same secret as the backend>
+
+on:
+  schedule:
+    - cron: '0 * * * *'    # hourly — the backend only generates at the IST time you chose in-app
+  workflow_dispatch:
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger scheduled generation (challenges + assignments)
+        run: |
+          URL="${{ vars.BACKEND_URL }}"
+          if [ -z "$URL" ]; then URL="https://python-platform.onrender.com"; fi
+          KEY="${{ secrets.CRON_KEY }}"
+          echo "Calling schedulers on $URL"
+          curl -fsS --max-time 120 -X POST "$URL/api/learn/cron/auto-challenges?key=$KEY" \
+            || echo "challenge scheduler call failed (will retry tomorrow)"
+          curl -fsS --max-time 120 -X POST "$URL/api/classroom/cron/auto-assignment?key=$KEY" \
+            || echo "assignment scheduler call failed (will retry tomorrow)"
